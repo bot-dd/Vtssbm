@@ -1,5 +1,4 @@
 import os
-import asyncio
 from aiohttp import ClientSession
 from re import search as re_search
 from pyrogram import Client, filters
@@ -7,18 +6,54 @@ from pymediainfo import MediaInfo
 
 # Optional imports with fallbacks
 try:
-    from bot import LOGGER  # For logging (optional)
-    from bot.helper.ext_utils.telegraph_helper import telegraph  # For Telegraph (optional)
+    from bot import LOGGER
+    from bot.helper.ext_utils.telegraph_helper import telegraph
     TELEGRAPH_AVAILABLE = True
 except ImportError:
     LOGGER = None
     TELEGRAPH_AVAILABLE = False
 
-CMD_HANDLER = "/"  # Adjust this to your bot's command prefix (e.g., "." if needed)
+CMD_HANDLER = "/"  # Verify this matches your bot's prefix
 
-async def gen_mediainfo(client, message, link=None, media=None):
-    """Generate MediaInfo from a link or replied media."""
-    await message.edit("Processing media info... 🚀")  # Initial feedback
+@Client.on_message(filters.command(["media_info", "mediainfo"], prefixes=CMD_HANDLER))
+async def media_info(client, message):
+    """Handle /media_info or /mediainfo with verbose feedback."""
+    # Step 1: Confirm command trigger
+    await message.edit_text("Step 1: Command triggered successfully.")
+    await asyncio.sleep(1)  # Brief delay for visibility
+
+    # Step 2: Detect input
+    link = None
+    media = None
+    if len(message.command) > 1:
+        link = message.command[1]
+        await message.edit_text(f"Step 2: Link detected - {link}")
+    elif message.reply_to_message:
+        if message.reply_to_message.text:
+            link = message.reply_to_message.text.strip()
+            await message.edit_text(f"Step 2: Replied link detected - {link}")
+        elif message.reply_to_message.media:
+            media = next(
+                (
+                    i for i in [
+                        message.reply_to_message.document,
+                        message.reply_to_message.video,
+                        message.reply_to_message.audio,
+                        message.reply_to_message.photo,
+                        message.reply_to_message.voice,
+                        message.reply_to_message.animation,
+                        message.reply_to_message.video_note,
+                    ] if i is not None
+                ),
+                None,
+            )
+            await message.edit_text(f"Step 2: Media detected - {media.file_name if media else 'None'}")
+    else:
+        await message.edit_text("Step 2: No input detected. Usage: `/media_info <link>` or reply to media/link.")
+        return
+
+    # Step 3: Process media info
+    await message.edit_text("Step 3: Processing media info...")
     temp_file = None
     try:
         if link:
@@ -29,50 +64,52 @@ async def gen_mediainfo(client, message, link=None, media=None):
             async with ClientSession() as session:
                 async with session.get(link, headers=headers) as response:
                     if response.status != 200:
-                        raise Exception(f"Download failed: HTTP {response.status}")
+                        raise Exception(f"HTTP {response.status}")
                     with open(temp_file, "wb") as f:
                         f.write(await response.read())
         elif media:
             temp_file = f"downloads/{media.file_name or f'media_{message.id}'}.tmp"
             os.makedirs("downloads", exist_ok=True)
-            if media.file_size <= 50_000_000:  # 50MB threshold
-                await message.reply_to_message.download(file_name=temp_file)
-            else:
-                with open(temp_file, "wb") as f:
-                    async for chunk in client.stream_media(message.reply_to_message, limit=10):
-                        f.write(chunk)
-                        await asyncio.sleep(0)  # Ensure responsiveness
+            await message.reply_to_message.download(file_name=temp_file)  # Simplified: no streaming for now
 
         if not temp_file or not os.path.exists(temp_file):
-            raise Exception("File not found or failed to download")
+            raise Exception("File not downloaded")
 
+        # Step 4: Parse metadata
+        await message.edit_text("Step 4: Parsing metadata...")
         media_info = MediaInfo.parse(temp_file)
         if not media_info.tracks:
             raise Exception("No metadata found")
 
-        # Output options
+        # Step 5: Generate output
+        await message.edit_text("Step 5: Generating output...")
         if "json" in message.text.lower():
             output = media_info.to_json()
         elif TELEGRAPH_AVAILABLE and "tele" in message.text.lower():
-            formatted_output = await parseinfo(media_info, html=True)
-            link_id = (await telegraph.create_page(title=f"MediaInfo - {message.id}", content=formatted_output))["path"]
+            output = parseinfo(media_info, html=True)
+            link_id = (await telegraph.create_page(title=f"MediaInfo - {message.id}", content=output))["path"]
             output = f"https://graph.org/{link_id}"
         else:
-            output = await parseinfo(media_info, html=False)
+            output = parseinfo(media_info, html=False)
 
-        return output
+        # Step 6: Deliver result
+        if "https://graph.org/" in output:
+            await message.edit_text(f"**Media Info** 📌\n\n➲ [View Details]({output})", disable_web_page_preview=False)
+        else:
+            await message.edit_text(output[:4096])
     except Exception as e:
         error_msg = f"Error: {str(e)}"
         if LOGGER:
-            LOGGER.error(error_msg)
-        await message.edit(error_msg)  # Ensure error is visible
-        return None
+            LOGGER.info(error_msg)  # Use INFO to ensure it logs
+        await message.edit_text(error_msg)
     finally:
         if temp_file and os.path.exists(temp_file):
             os.remove(temp_file)
+            if LOGGER:
+                LOGGER.info(f"Cleaned up: {temp_file}")
 
-async def parseinfo(media_info, html=False):
-    """Parse MediaInfo into formatted text or HTML."""
+def parseinfo(media_info, html=False):
+    """Parse MediaInfo into text or HTML."""
     section_dict = {"General": "🗒", "Video": "🎞", "Audio": "🔊", "Text": "🔠", "Menu": "🗃", "Image": "🖼"}
     output = "<h4>📌 Media Info</h4><br><br>" if html else "**Media Info** 📌\n\n"
     
@@ -113,48 +150,3 @@ async def parseinfo(media_info, html=False):
                 output += "</pre>"
     
     return output
-
-@Client.on_message(filters.command(["media_info", "mediainfo"], CMD_HANDLER))
-async def media_info(client, message):
-    """Handle /media_info or /mediainfo command."""
-    await message.edit("Command received, checking input...")  # Debug step 1: Confirm trigger
-    
-    link = None
-    media = None
-
-    # Input detection
-    if len(message.command) > 1:
-        link = message.command[1]
-        await message.edit(f"Detected link: {link}")  # Debug step 2: Confirm link
-    elif message.reply_to_message:
-        if message.reply_to_message.text:
-            link = message.reply_to_message.text.strip()
-            await message.edit(f"Detected replied link: {link}")  # Debug step 3: Confirm replied link
-        elif message.reply_to_message.media:
-            media = next(
-                (
-                    i for i in [
-                        message.reply_to_message.document,
-                        message.reply_to_message.video,
-                        message.reply_to_message.audio,
-                        message.reply_to_message.photo,
-                        message.reply_to_message.voice,
-                        message.reply_to_message.animation,
-                        message.reply_to_message.video_note,
-                    ] if i is not None
-                ),
-                None,
-            )
-            await message.edit(f"Detected media: {media.file_name if media else 'None'}")  # Debug step 4: Confirm media
-    
-    if not link and not media:
-        await message.edit("Usage: `/media_info <link>` or reply to a media file/link.\nOptions: `json`, `tele`")
-        return
-
-    result = await gen_mediainfo(client, message, link=link, media=media)
-    if result:
-        if "https://graph.org/" in result:
-            await message.edit(f"**Media Info Generated** 📌\n\n➲ [View Details]({result})", disable_web_page_preview=False)
-        else:
-            await message.edit(result[:4096])  # Telegram char limit
-    # No else needed; errors are handled in gen_mediainfo
