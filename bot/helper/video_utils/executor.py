@@ -268,7 +268,7 @@ class VidEcxecutor(FFProgress):
         self.size = sum(await gather(*[get_path_size(f) for f in file_list]))
 
         await self._start_handler(streams)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data.get('streams_to_remove'):
             LOGGER.info("No streams selected for removal or cancelled.")
             return self._up_path
@@ -305,7 +305,7 @@ class VidEcxecutor(FFProgress):
         base_dir = await self._name_base_dir(file_list[0], 'Merge-PreRemoveAudio', True)
 
         await self._start_handler(streams_per_file)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data:
             LOGGER.info("Cancelled or no selections made.")
             return self._up_path
@@ -353,7 +353,7 @@ class VidEcxecutor(FFProgress):
             return self._up_path
         
         await self._start_handler(streams)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data:
             LOGGER.info(f"Cancelled or no selections for {single_file}")
             return self._up_path
@@ -475,7 +475,7 @@ class VidEcxecutor(FFProgress):
         self._files = file_list
         streams = await get_metavideo(file_list[0])
         await self._start_handler(streams)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data:
             return self._up_path
         
@@ -492,7 +492,7 @@ class VidEcxecutor(FFProgress):
     async def _rm_stream(self, file_list):
         streams = await get_metavideo(file_list[0])
         await self._start_handler(streams)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data:
             return self._up_path
         
@@ -515,7 +515,7 @@ class VidEcxecutor(FFProgress):
     async def _vid_convert(self, file_list):
         streams = await get_metavideo(file_list[0])
         await self._start_handler(streams)
-        await wait_for(self.event.wait(), timeout=180)
+        await wait_for(self.event.wait(), timeout=900)
         if self.is_cancelled or not self.data:
             return self._up_path
         

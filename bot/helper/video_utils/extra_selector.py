@@ -28,7 +28,7 @@ class ExtraSelect:
         handler = self._listener.client.add_handler(
             CallbackQueryHandler(pfunc, filters=regex('^extra') & user(self._listener.user_id)), group=-1)
         try:
-            while not self._done and (time() - self._time) < 180:
+            while not self._done and (time() - self._time) < 900:
                 await asyncio.sleep(1)
             if not self._done:
                 LOGGER.warning(f"ExtraSelect timed out for {self.executor.mode}")
@@ -131,7 +131,7 @@ class ExtraSelect:
                 text += f"{i}. {self.executor.data['streams'][key]['info']}\n"
 
         elapsed_time = int(time() - self._time)
-        remaining_time = max(0, 180 - elapsed_time)
+        remaining_time = max(0, 900 - elapsed_time)
         text += f'\n<i>Time Left: {get_readable_time(remaining_time)}</i>'
         LOGGER.info(f"Prepared streams_select text for {mode}")
         return text, buttons.build_menu(2)

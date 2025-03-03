@@ -32,7 +32,7 @@ class SelectMode:
         handler = self.listener.client.add_handler(
             CallbackQueryHandler(pfunc, filters=regex('^vidtool') & user(self.listener.user_id)), group=-1)
         try:
-            await wait_for(self.event.wait(), timeout=180)
+            await wait_for(self.event.wait(), timeout=900)
             LOGGER.info(f"SelectMode event completed for user {self.listener.user_id}")
         except TimeoutError:
             self.mode = 'Task cancelled due to timeout!'
@@ -79,7 +79,7 @@ class SelectMode:
                                 '5:main_h-overlay_h': 'Bottom Left', 'main_w-overlay_w-5:main_h-overlay_h-5': 'Bottom Right'}
                     msg += f'\nWatermark Position: <b>{pos_dict.get(wmposition, wmposition)}</b>'
         elapsed_time = int(time() - self._time)
-        remaining_time = max(0, 180 - elapsed_time)
+        remaining_time = max(0, 900 - elapsed_time)
         msg += f'\n\n<i>Time Remaining: {get_readable_time(remaining_time)}</i>'
         return msg
 
