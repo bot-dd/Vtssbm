@@ -8,8 +8,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /usr/src/app
 COPY . .
-RUN unzip -o ac.zip && rm ac.zip
 RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ac.zip .
+RUN unzip -o ac.zip
+RUN ls -l
 
 RUN chmod 755 start.sh
 CMD ["./start.sh"]
