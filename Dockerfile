@@ -1,14 +1,5 @@
-FROM python:3.10-slim
+FROM mysterysd/wzmlx:latest
 
-ARG RELEASE
-ARG LAUNCHPAD_BUILD_ARCH
-LABEL org.opencontainers.image.ref.name=python-slim
-LABEL org.opencontainers.image.version=3.10
-
-ENV DEBIAN_FRONTEND=noninteractive \
-    PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    LANG=en_US.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     unzip zip locales \
