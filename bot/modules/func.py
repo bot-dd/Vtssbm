@@ -800,8 +800,8 @@ async def start(client, message):
         )
     else:
         buttons = ButtonMaker()
-        buttons.ubutton("Group", "https://t.me/hexafreinds")
-        buttons.ubutton("Owner", "https://t.me/maheshsirop")
+        buttons.ubutton("Group", "https://t.me/RM_MirrorLeech")
+        buttons.ubutton("Owner", "https://t.me/RahatMx")
         reply_markup = buttons.build_menu(2)
         start_string = f'''This bot can mirror all your links|files|torrents to Google Drive or any rclone cloud or to telegram.\nType /{BotCommands.HelpCommand} to get a list of available commands'''
         await send_to_chat(message=message, text=start_string, buttons=reply_markup, reply=True, photo=True)
